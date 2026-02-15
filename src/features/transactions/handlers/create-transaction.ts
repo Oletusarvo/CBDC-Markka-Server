@@ -5,6 +5,7 @@ import { createHandler } from '../../../utils/create-handler';
 
 /**Transfers money between two accounts. */
 export const createTransaction = createHandler(async (req: AuthenticatedExpressRequest, res) => {
+  console.log('Calling create transaction...');
   const session = req.session;
 
   const sender = await db('account')
@@ -35,6 +36,10 @@ export const createTransaction = createHandler(async (req: AuthenticatedExpressR
   } else if (!receiver) {
     return res.status(404).json({
       error: 'transaction:invalid-recipient',
+    });
+  } else if (sender.id === receiver.id) {
+    return res.status(409).json({
+      error: 'transaction:self-transaction',
     });
   } else if (amt_in_cents > sender.balance_in_cents) {
     return res.status(409).json({
