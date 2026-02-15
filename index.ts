@@ -10,6 +10,7 @@ const app = express();
 const allowedOrigins = [
   'http://10.215.98.92:5173',
   'http://localhost:5173',
+  'http://localhost:61032',
   'https://localhost',
   'capacitor://localhost',
   'https://cbdc-markka.onrender.com',
