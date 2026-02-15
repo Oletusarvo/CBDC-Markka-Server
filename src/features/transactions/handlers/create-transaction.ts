@@ -30,15 +30,15 @@ export const createTransaction = createHandler(async (req: AuthenticatedExpressR
 
   if (!sender) {
     return res.status(404).json({
-      error: 'The sender account does not exist!',
+      error: 'transaction:sender-invalid',
     });
   } else if (!receiver) {
     return res.status(404).json({
-      error: 'The receiver account does not exist!',
+      error: 'transaction:invalid-recipient',
     });
   } else if (amt_in_cents > sender.balance_in_cents) {
     return res.status(409).json({
-      error: 'account:insufficient_funds',
+      error: 'transaction:insufficient-funds',
     });
   }
 
