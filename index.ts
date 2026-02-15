@@ -12,6 +12,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://localhost',
   'capacitor://localhost',
+  'https://cbdc-markka.onrender.com',
 ];
 app.use(cookieParser());
 app.use(

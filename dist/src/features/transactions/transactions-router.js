@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.transactionsRouter = void 0;
+const create_body_parser_1 = require("../../utils/create-body-parser");
+const get_router_1 = require("../../utils/get-router");
+const check_auth_1 = require("../auth/middleware/check-auth");
+const create_transaction_1 = require("./handlers/create-transaction");
+const transaction_schema_1 = require("./schemas/transaction-schema");
+const router = (0, get_router_1.getRouter)();
+exports.transactionsRouter = router;
+router.post('/', (0, check_auth_1.checkAuth)(), (0, create_body_parser_1.createBodyParser)(transaction_schema_1.transactionSchema), create_transaction_1.createTransaction);

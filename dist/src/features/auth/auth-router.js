@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authRouter = void 0;
+const create_body_parser_1 = require("../../utils/create-body-parser");
+const get_router_1 = require("../../utils/get-router");
+const register_user_handler_1 = require("./handlers/register-user-handler");
+const login_handler_1 = require("./handlers/login-handler");
+const login_credentials_schema_1 = require("./schemas/login-credentials-schema");
+const register_user_schema_1 = require("./schemas/register-user-schema");
+const check_auth_1 = require("./middleware/check-auth");
+const get_session_handler_1 = require("./handlers/get-session-handler");
+const logout_handler_1 = require("./handlers/logout-handler");
+const router = (0, get_router_1.getRouter)();
+exports.authRouter = router;
+router.post('/register', (0, create_body_parser_1.createBodyParser)(register_user_schema_1.userSchema), register_user_handler_1.registerUserHandler);
+router.post('/login', (0, create_body_parser_1.createBodyParser)(login_credentials_schema_1.loginCredentialsSchema), login_handler_1.loginHandler);
+router.get('/session', (0, check_auth_1.checkAuth)(), get_session_handler_1.getSessionHandler);
+router.get('/logout', (0, check_auth_1.checkAuth)(), logout_handler_1.logoutHandler);

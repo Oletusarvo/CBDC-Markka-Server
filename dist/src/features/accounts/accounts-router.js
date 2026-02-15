@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.accountsRouter = void 0;
+const create_body_parser_1 = require("../../utils/create-body-parser");
+const get_router_1 = require("../../utils/get-router");
+const check_auth_1 = require("../auth/middleware/check-auth");
+const register_user_schema_1 = require("../auth/schemas/register-user-schema");
+const create_account_1 = require("./handlers/create-account");
+const get_account_1 = require("./handlers/get-account");
+const get_transactions_1 = require("./handlers/get-transactions");
+const router = (0, get_router_1.getRouter)();
+exports.accountsRouter = router;
+router.post('/', (0, check_auth_1.checkAuth)(), (0, create_body_parser_1.createBodyParser)(register_user_schema_1.userSchema), create_account_1.createAccount);
+router.get('/transactions', (0, check_auth_1.checkAuth)(), get_transactions_1.getTransactions);
+router.get('/', (0, check_auth_1.checkAuth)(), get_account_1.getAccount);
