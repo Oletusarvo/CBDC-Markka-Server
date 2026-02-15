@@ -5,6 +5,7 @@ import http from 'http';
 import cookieParser from 'cookie-parser';
 import { transactionsRouter } from './src/features/transactions/transactions-router';
 import { accountsRouter } from './src/features/accounts/accounts-router';
+import { currenciesRouter } from './src/features/currencies/currenciesRouter';
 
 const app = express();
 const allowedOrigins = [
@@ -36,6 +37,7 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/accounts', accountsRouter);
+app.use('/api/currencies', currenciesRouter);
 
 const server = http.createServer(app);
 
