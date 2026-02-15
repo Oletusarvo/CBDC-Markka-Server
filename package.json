@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "dev": "npx nodemon --watch src --ext ts --exec ts-node index.ts"
+    "dev": "npx nodemon --watch src --ext ts --exec ts-node index.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
