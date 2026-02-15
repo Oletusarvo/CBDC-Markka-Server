@@ -37,6 +37,7 @@ export const loginHandler = createHandler(
         maxAge: 1000 * 60 * 60 * 24,
         httpOnly: true,
         secure: true,
+        sameSite: 'none',
       })
       .json({
         token,
