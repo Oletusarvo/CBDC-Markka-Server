@@ -5,7 +5,7 @@ import http from 'http';
 import cookieParser from 'cookie-parser';
 import { transactionsRouter } from './src/features/transactions/transactions-router';
 import { accountsRouter } from './src/features/accounts/accounts-router';
-import { currenciesRouter } from './src/features/currencies/currenciesRouter';
+import { currenciesRouter } from './src/features/currencies/currencies-router';
 
 const app = express();
 const allowedOrigins = [
