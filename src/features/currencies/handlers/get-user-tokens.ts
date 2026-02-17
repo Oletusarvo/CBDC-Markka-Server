@@ -8,7 +8,5 @@ export const getUserTokens = createHandler(async (req: AuthenticatedExpressReque
   const tokens = await getTokens(db).where({
     account_id: db.select('id').from('account').where({ user_id: session.user.id }).limit(1),
   });
-  return res.status(200).json({
-    tokens,
-  });
+  return res.status(200).json(tokens);
 });

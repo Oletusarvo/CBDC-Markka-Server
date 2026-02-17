@@ -46,7 +46,7 @@ export const createTransactionWithTokens = createHandler(
 
     const reserveTokens = await getTokens(db)
       .whereNull('account_id')
-      .groupBy('currency_denom_type.value_in_cents', 'desc')
+      .orderBy('currency_denom_type.value_in_cents', 'desc')
       .limit(200);
 
     const tender = pick(senderTokens, amtInCents);
@@ -165,6 +165,13 @@ export const createTransactionWithTokens = createHandler(
           });
         }),
       );
+
+      await trx('transaction').insert({
+        from: senderAccount.id,
+        to: receiverAccount.id,
+        amount_in_cents: amtInCents,
+        message: req.data.message,
+      });
     });
 
     return res.status(200).end();
