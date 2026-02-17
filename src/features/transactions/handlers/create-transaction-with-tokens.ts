@@ -44,7 +44,10 @@ export const createTransactionWithTokens = createHandler(
       account_id: receiverAccount.id,
     });
 
-    const reserveTokens = await getTokens(db).whereNull('account_id');
+    const reserveTokens = await getTokens(db)
+      .whereNull('account_id')
+      .groupBy('currency_denom_type.value_in_cents', 'desc')
+      .limit(200);
 
     const tender = pick(senderTokens, amtInCents);
     const changeAmtInCents = sumTokens(tender) - amtInCents;
@@ -52,10 +55,9 @@ export const createTransactionWithTokens = createHandler(
     const finalTokensToUpdate = [];
 
     if (changeAmtInCents > 0) {
-      let change = [];
       //1. Try to get change from the receiver. Has to be exact.
       if (containsExactly(receiverTokens, changeAmtInCents)) {
-        change = pick(receiverTokens, changeAmtInCents);
+        const change = pick(receiverTokens, changeAmtInCents);
         finalTokensToUpdate.push(
           ...change.map(t => {
             return {
@@ -77,7 +79,7 @@ export const createTransactionWithTokens = createHandler(
         containsExactly(reserveTokens, amtInCents) &&
         containsExactly(reserveTokens, changeAmtInCents)
       ) {
-        change = pick(reserveTokens, changeAmtInCents);
+        const change = pick(reserveTokens, changeAmtInCents);
         const toReceiver = pick(reserveTokens, amtInCents);
         finalTokensToUpdate.push(
           //Give the change to the sender
@@ -105,7 +107,7 @@ export const createTransactionWithTokens = createHandler(
       } else {
         //Mint new coins. Put original tender in reserve.
         const toReceiver = mint(amtInCents);
-        const toSender = mint(changeAmtInCents);
+        const change = mint(changeAmtInCents);
         finalTokensToMint.push(
           ...toReceiver.map(amt => {
             return {
@@ -113,7 +115,7 @@ export const createTransactionWithTokens = createHandler(
               account_id: receiverAccount.id,
             };
           }),
-          ...toSender.map(amt => {
+          ...change.map(amt => {
             return {
               value_in_cents: amt,
               account_id: senderAccount.id,
