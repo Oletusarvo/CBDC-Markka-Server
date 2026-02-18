@@ -1,25 +1,25 @@
 import { db } from '../../../db-config';
+import { tablenames } from '../../../tablenames';
 import { AuthenticatedExpressRequest } from '../../../types/express';
 
 import { createHandler } from '../../../utils/create-handler';
 
 /**Transfers money between two accounts. */
 export const createTransaction = createHandler(async (req: AuthenticatedExpressRequest, res) => {
-  console.log('Calling create transaction...');
   const session = req.session;
 
-  const sender = await db('account')
+  const sender = await db(tablenames.accounts)
     .where({ user_id: session.user.id })
     .select('balance_in_cents', 'id')
     .first();
 
-  const receiver = await db('account')
+  const receiver = await db(tablenames.accounts)
     .where({
       id: db
         .select('id')
-        .from('account')
+        .from(tablenames.accounts)
         .where({
-          user_id: db.select('id').from('user').where({ email: req.data.email }).limit(1),
+          user_id: db.select('id').from(tablenames.users).where({ email: req.data.email }).limit(1),
         })
         .limit(1),
     })
@@ -48,9 +48,13 @@ export const createTransaction = createHandler(async (req: AuthenticatedExpressR
   }
 
   await db.transaction(async trx => {
-    await trx('account').where({ id: sender.id }).decrement('balance_in_cents', amt_in_cents);
-    await trx('account').where({ id: receiver.id }).increment('balance_in_cents', amt_in_cents);
-    await trx('transaction').insert({
+    await trx(tablenames.accounts)
+      .where({ id: sender.id })
+      .decrement('balance_in_cents', amt_in_cents);
+    await trx(tablenames.accounts)
+      .where({ id: receiver.id })
+      .increment('balance_in_cents', amt_in_cents);
+    await trx(tablenames.transactions).insert({
       from: sender.id,
       to: receiver.id,
       amount_in_cents: amt_in_cents,

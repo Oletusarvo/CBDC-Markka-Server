@@ -1,4 +1,5 @@
 import { db } from '../../../db-config';
+import { tablenames } from '../../../tablenames';
 import { AuthenticatedExpressRequest } from '../../../types/express';
 import { createHandler } from '../../../utils/create-handler';
 import { getTokens } from '../../currencies/helpers/get-tokens';
@@ -7,7 +8,7 @@ import { containsExactly, mint, pick, sumTokens } from '../../currencies/util/cu
 export const createTransactionWithTokens = createHandler(
   async (req: AuthenticatedExpressRequest, res) => {
     const session = req.session;
-    const senderAccount = await db('account')
+    const senderAccount = await db(tablenames.accounts)
       .where({ user_id: session.user.id })
       .select('id')
       .first();
@@ -18,8 +19,10 @@ export const createTransactionWithTokens = createHandler(
       });
     }
 
-    const receiverAccount = await db('account')
-      .where({ user_id: db.select('id').from('user').where({ email: req.data.email }).limit(1) })
+    const receiverAccount = await db(tablenames.accounts)
+      .where({
+        user_id: db.select('id').from(tablenames.users).where({ email: req.data.email }).limit(1),
+      })
       .first();
 
     if (!receiverAccount) {
@@ -46,7 +49,7 @@ export const createTransactionWithTokens = createHandler(
 
     const reserveTokens = await getTokens(db)
       .whereNull('account_id')
-      .orderBy('currency_denom_type.value_in_cents', 'desc')
+      .orderBy('denom_type.value_in_cents', 'desc')
       .limit(200);
 
     const tender = pick(senderTokens, amtInCents);
@@ -147,7 +150,7 @@ export const createTransactionWithTokens = createHandler(
     await db.transaction(async trx => {
       await Promise.all(
         finalTokensToUpdate.map(async t => {
-          await trx('currency_object').where({ id: t.id }).update({
+          await trx(tablenames.currencyObjects).where({ id: t.id }).update({
             account_id: t.account_id,
           });
         }),
@@ -155,18 +158,18 @@ export const createTransactionWithTokens = createHandler(
 
       await Promise.all(
         finalTokensToMint.map(async t => {
-          await trx('currency_object').insert({
+          await trx(tablenames.currencyObjects).insert({
             account_id: t.account_id,
-            currency_denom_type_id: trx
+            denom_type_id: trx
               .select('id')
-              .from('currency_denom_type')
+              .from('denom_type')
               .where({ value_in_cents: t.value_in_cents })
               .limit(1),
           });
         }),
       );
 
-      await trx('transaction').insert({
+      await trx(tablenames.transactions).insert({
         from: senderAccount.id,
         to: receiverAccount.id,
         amount_in_cents: amtInCents,

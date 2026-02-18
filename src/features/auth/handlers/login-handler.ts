@@ -1,5 +1,6 @@
 import { serverConfig } from '../../../../server-config';
 import { db } from '../../../db-config';
+import { tablenames } from '../../../tablenames';
 import { ExpressRequest } from '../../../types/express';
 import { createHandler } from '../../../utils/create-handler';
 import { createJWT } from '../../../utils/jwt';
@@ -8,7 +9,7 @@ import { verifyPassword } from '../../../utils/password';
 export const loginHandler = createHandler(
   async (req: ExpressRequest<{ email: string; password: string }>, res) => {
     const credentials = req.body;
-    const user = await db('user')
+    const user = await db(tablenames.users)
       .where({ email: credentials.email })
       .select('password', 'id', 'email')
       .first();
