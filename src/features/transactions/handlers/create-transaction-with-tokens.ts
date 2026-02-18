@@ -61,7 +61,6 @@ export const createTransactionWithTokens = createHandler(
     const tender = pick(senderTokens, amtInCents);
     const tenderSum = sumTokens(tender);
     const changeAmtInCents = tenderSum - amtInCents;
-    console.log(req.data, tenderSum, changeAmtInCents);
 
     const finalTokensToMint = [];
     const finalTokensToUpdate = [];
