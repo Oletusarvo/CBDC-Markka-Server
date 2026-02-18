@@ -79,7 +79,7 @@ function getClosest(bills: TBill[], targetAmtInCents: number, aboveNegative: boo
   return closest && bills.at(closest.index);
 }
 
-/**Picks from a group of bills the minimum number of tokens to satisfy the target amount.*/
+/**Picks from a group of bills the minimum number of tokens to satisfy the target amount. Does not modify the original array of bills.*/
 export function pick(bills: TBill[], targetAmtInCents: number) {
   const temp = desc([...bills]);
   const selected: TBill[] = [];
@@ -110,6 +110,31 @@ export function pick(bills: TBill[], targetAmtInCents: number) {
     }
   }
   return selected;
+}
+
+/**Returns the given array of bills without the bills adding up to the given amount in cents. If the original bills do not satisfy the amount in cents exactly, returns an empty array. */
+export function without(bills: TBill[], amountInCents: number) {
+  const temp = [...bills];
+  if (!containsExactly(bills, amountInCents)) {
+    return [];
+  }
+  let total = 0;
+  const indexesToDelete = [];
+  for (let i = 0; i < bills.length; ++i) {
+    const bill = bills[i];
+    total += bill.value_in_cents;
+    if (total <= amountInCents) {
+      indexesToDelete.push(i);
+    }
+  }
+
+  return temp
+    .map((b, i) => {
+      if (!indexesToDelete.includes(i)) {
+        return b;
+      }
+    })
+    .filter(b => b);
 }
 
 export { sum as sumTokens };

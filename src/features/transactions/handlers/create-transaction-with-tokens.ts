@@ -3,7 +3,13 @@ import { tablenames } from '../../../tablenames';
 import { AuthenticatedExpressRequest } from '../../../types/express';
 import { createHandler } from '../../../utils/create-handler';
 import { getTokens } from '../../currencies/helpers/get-tokens';
-import { containsExactly, mint, pick, sumTokens } from '../../currencies/util/currency-util';
+import {
+  containsExactly,
+  mint,
+  pick,
+  sumTokens,
+  without,
+} from '../../currencies/util/currency-util';
 
 export const createTransactionWithTokens = createHandler(
   async (req: AuthenticatedExpressRequest, res) => {
@@ -80,7 +86,8 @@ export const createTransactionWithTokens = createHandler(
       else if (
         //Reserve must have exactly the coins for both parties.
         containsExactly(reserveTokens, amtInCents) &&
-        containsExactly(reserveTokens, changeAmtInCents)
+        //This should check the reserve without the amount in cents, aginst the change.
+        containsExactly(without(reserveTokens, amtInCents), changeAmtInCents)
       ) {
         const change = pick(reserveTokens, changeAmtInCents);
         const toReceiver = pick(reserveTokens, amtInCents);
