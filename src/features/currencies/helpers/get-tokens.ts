@@ -1,3 +1,4 @@
+import { db } from '../../../db-config';
 import { tablenames } from '../../../tablenames';
 import { DBContext } from '../../../types/db-context';
 
@@ -7,6 +8,6 @@ export function getTokens(ctx: DBContext) {
     .select(
       'currency_object.id',
       'currency_object.minted_on',
-      'denom_type.value_in_cents as value_in_cents',
+      db.raw('CAST(denom_type.value_in_cents as INT) as value_in_cents'),
     );
 }

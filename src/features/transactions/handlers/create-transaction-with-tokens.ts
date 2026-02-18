@@ -59,7 +59,10 @@ export const createTransactionWithTokens = createHandler(
       .limit(200);
 
     const tender = pick(senderTokens, amtInCents);
-    const changeAmtInCents = sumTokens(tender) - amtInCents;
+    const tenderSum = sumTokens(tender);
+    const changeAmtInCents = tenderSum - amtInCents;
+    console.log(req.data, tenderSum, changeAmtInCents);
+
     const finalTokensToMint = [];
     const finalTokensToUpdate = [];
 
@@ -67,6 +70,7 @@ export const createTransactionWithTokens = createHandler(
       //1. Try to get change from the receiver. Has to be exact.
       if (containsExactly(receiverTokens, changeAmtInCents)) {
         const change = pick(receiverTokens, changeAmtInCents);
+
         finalTokensToUpdate.push(
           ...change.map(t => {
             return {
@@ -86,7 +90,7 @@ export const createTransactionWithTokens = createHandler(
       else if (
         //Reserve must have exactly the coins for both parties.
         containsExactly(reserveTokens, amtInCents) &&
-        //This should check the reserve without the amount in cents, aginst the change.
+        //This should check the reserve without the amount in cents, against the change.
         containsExactly(without(reserveTokens, amtInCents), changeAmtInCents)
       ) {
         const change = pick(reserveTokens, changeAmtInCents);
