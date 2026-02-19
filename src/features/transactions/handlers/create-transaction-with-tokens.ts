@@ -75,12 +75,14 @@ export const createTransactionWithTokens = createHandler(
             return {
               ...t,
               account_id: senderAccount.id,
+              old_account_id: receiverAccount.id,
             };
           }),
           ...tender.map(t => {
             return {
               ...t,
               account_id: receiverAccount.id,
+              old_account_id: senderAccount.id,
             };
           }),
         );
@@ -100,6 +102,7 @@ export const createTransactionWithTokens = createHandler(
             return {
               ...t,
               account_id: senderAccount.id,
+              old_account_id: receiverAccount.id,
             };
           }),
           //Give the receiver their fair share
@@ -107,6 +110,7 @@ export const createTransactionWithTokens = createHandler(
             return {
               ...t,
               account_id: receiverAccount.id,
+              old_account_id: senderAccount.id,
             };
           }),
           //Put the original tender in reserve
@@ -126,12 +130,14 @@ export const createTransactionWithTokens = createHandler(
             return {
               value_in_cents: amt,
               account_id: receiverAccount.id,
+              old_account_id: senderAccount.id,
             };
           }),
           ...change.map(amt => {
             return {
               value_in_cents: amt,
               account_id: senderAccount.id,
+              old_account_id: receiverAccount.id,
             };
           }),
         );
@@ -152,32 +158,35 @@ export const createTransactionWithTokens = createHandler(
           return {
             ...t,
             account_id: receiverAccount.id,
+            old_account_id: senderAccount.id,
           };
         }),
       );
     }
 
     await db.transaction(async trx => {
-      await Promise.all(
-        finalTokensToUpdate.map(async t => {
-          await trx(tablenames.currencyObjects).where({ id: t.id }).update({
+      for (const t of finalTokensToUpdate) {
+        const rows = await trx(tablenames.currencyObjects)
+          .where({ id: t.id, account_id: t.old_account_id })
+          .update({
             account_id: t.account_id,
           });
-        }),
-      );
 
-      await Promise.all(
-        finalTokensToMint.map(async t => {
-          await trx(tablenames.currencyObjects).insert({
-            account_id: t.account_id,
-            denom_type_id: trx
-              .select('id')
-              .from('denom_type')
-              .where({ value_in_cents: t.value_in_cents })
-              .limit(1),
-          });
-        }),
-      );
+        if (rows !== 1) {
+          throw new Error('Double spend detected!');
+        }
+      }
+
+      for (const t of finalTokensToMint) {
+        await trx(tablenames.currencyObjects).insert({
+          account_id: t.account_id,
+          denom_type_id: trx
+            .select('id')
+            .from('denom_type')
+            .where({ value_in_cents: t.value_in_cents })
+            .limit(1),
+        });
+      }
 
       await trx(tablenames.transactions).insert({
         from: senderAccount.id,
@@ -188,5 +197,13 @@ export const createTransactionWithTokens = createHandler(
     });
 
     return res.status(200).end();
+  },
+  (err, res) => {
+    if (err.message.includes('Double spend')) {
+      return res.status(409).json({
+        error: 'transaction:double-spend',
+      });
+    }
+    return res.status(500).end();
   },
 );

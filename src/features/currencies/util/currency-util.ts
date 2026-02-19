@@ -6,10 +6,12 @@ export type TBill = {
 };
 
 const sum = (arr: TBill[]) => arr.reduce((acc, cur) => (acc += cur.value_in_cents), 0);
-const desc = arr => arr.sort((a, b) => b - a);
-export const DENOMS_IN_CENTS = desc([
+const desc = (arr: TBill[]) =>
+  arr.sort((a: TBill, b: TBill) => b.value_in_cents - a.value_in_cents);
+
+export const DENOMS_IN_CENTS = [
   1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 50000,
-]);
+].reverse();
 
 /**Greedily mints new currency, creating as few new tokens as possible.*/
 export function mint(amountInCents: number, maxDenom = 50000) {
@@ -93,12 +95,12 @@ export function pick(bills: TBill[], targetAmtInCents: number) {
   while (totalSelected < targetAmtInCents) {
     const amtLeft = targetAmtInCents - totalSelected;
     //First find a bill that matches exactly the target in cents.
-    const exact = temp.find(b => b === amtLeft);
+    const exact = temp.find(b => b.value_in_cents === amtLeft);
     //const exact = getExact(temp, amtLeft);
 
     if (exact) {
       selected.push(exact);
-      totalSelected += exact;
+      totalSelected += exact.value_in_cents;
     } else {
       //Grab the one closest to the current target.
       const hasAmtExactly = containsExactly(temp, amtLeft);
