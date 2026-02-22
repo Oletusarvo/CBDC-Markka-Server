@@ -118,6 +118,7 @@ export const createTransactionWithTokens = createHandler(
             return {
               ...t,
               account_id: null,
+              old_account_id: senderAccount.id,
             };
           }),
         );
@@ -147,6 +148,7 @@ export const createTransactionWithTokens = createHandler(
             return {
               ...t,
               account_id: null,
+              old_account_id: senderAccount.id,
             };
           }),
         );

@@ -4,7 +4,7 @@ const getSecret = () => process.env.TOKEN_SECRET;
 
 export function createJWT<T extends Record<string, unknown>>(
   payload: T,
-  options?: jwt.SignOptions
+  options?: jwt.SignOptions,
 ) {
   return jwt.sign(payload, getSecret(), options);
 }

@@ -7,6 +7,9 @@ import { db } from '../../../db-config';
 import { hashPassword } from '../../../utils/password';
 import { containsExactly, mint, pick } from '../../currencies/util/currency-util';
 import { tablenames } from '../../../tablenames';
+import { getTokens } from '../../currencies/helpers/get-tokens';
+
+const MAX_SUPPLY_IN_CENTS = 110_000_000_000;
 
 export const registerUserHandler = createHandler(
   async (req: ExpressRequest<z.infer<typeof userSchema>>, res) => {
@@ -24,6 +27,16 @@ export const registerUserHandler = createHandler(
           user_id: user.id,
         })
         .returning('id');
+
+      const currentSupplyInCents = await trx(tablenames.currencyObjects)
+        .leftJoin(tablenames.denomTypes, 'denom_type.id', 'currency_object.denom_type_id')
+        .whereNotNull('currency_object.account_id')
+        .sum('denom_type.value_in_cents as total')
+        .first();
+
+      if (currentSupplyInCents.total + 2000 > MAX_SUPPLY_IN_CENTS) {
+        return;
+      }
 
       const reserveTokens = await trx(tablenames.currencyObjects)
         .whereNull('account_id')

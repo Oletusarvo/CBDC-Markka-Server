@@ -2,6 +2,7 @@ import { db } from '../../../db-config';
 import { tablenames } from '../../../tablenames';
 import { DBContext } from '../../../types/db-context';
 
+/**Returns tokens and joins the denom type table into the result. */
 export function getTokens(ctx: DBContext) {
   return ctx(tablenames.currencyObjects)
     .leftJoin(tablenames.denomTypes, 'denom_type.id', 'currency_object.denom_type_id')

@@ -1,8 +1,8 @@
 import { db } from '../../../db-config';
 import { tablenames } from '../../../tablenames';
 import { createHandler } from '../../../utils/create-handler';
-import { getTokens } from '../helpers/get-tokens';
 
+/**Returns the total quantity of tokens in circulation. */
 export const getCirculation = createHandler(async (req, res) => {
   const result = await db(tablenames.currencyObjects)
     .leftJoin(tablenames.denomTypes, 'denom_type.id', 'currency_object.denom_type_id')
