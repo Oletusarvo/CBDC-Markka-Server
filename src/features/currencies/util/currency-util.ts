@@ -20,7 +20,7 @@ export function mint(amountInCents: number, maxDenom = 50000) {
   while (amountInCents > 0) {
     const denom = DENOMS_IN_CENTS.find(den => den < amountInCents || den === amountInCents);
     amountInCents -= denom;
-    mintedBills.push(denom);
+    mintedBills.push({ value_in_cents: denom });
   }
 
   return desc(mintedBills);

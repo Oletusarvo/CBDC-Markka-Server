@@ -8,6 +8,7 @@ import {
   mint,
   pick,
   sumTokens,
+  TBill,
   without,
 } from '../../currencies/util/currency-util';
 
@@ -65,105 +66,85 @@ export const createTransactionWithTokens = createHandler(
     const finalTokensToMint = [];
     const finalTokensToUpdate = [];
 
-    if (changeAmtInCents > 0) {
-      //1. Try to get change from the receiver. Has to be exact.
-      if (containsExactly(receiverTokens, changeAmtInCents)) {
-        const change = pick(receiverTokens, changeAmtInCents);
-
-        finalTokensToUpdate.push(
-          ...change.map(t => {
-            return {
-              ...t,
-              account_id: senderAccount.id,
-              old_account_id: receiverAccount.id,
-            };
-          }),
-          ...tender.map(t => {
-            return {
-              ...t,
-              account_id: receiverAccount.id,
-              old_account_id: senderAccount.id,
-            };
-          }),
-        );
-      }
-      //2. Try to get change from the reserve. Has to be exact.
-      else if (
-        //Reserve must have exactly the coins for both parties.
-        containsExactly(reserveTokens, amtInCents) &&
-        //This should check the reserve without the amount in cents, against the change.
-        containsExactly(without(reserveTokens, amtInCents), changeAmtInCents)
-      ) {
-        const change = pick(reserveTokens, changeAmtInCents);
-        const toReceiver = pick(reserveTokens, amtInCents);
-        finalTokensToUpdate.push(
-          //Give the change to the sender
-          ...change.map(t => {
-            return {
-              ...t,
-              account_id: senderAccount.id,
-              old_account_id: receiverAccount.id,
-            };
-          }),
-          //Give the receiver their fair share
-          ...toReceiver.map(t => {
-            return {
-              ...t,
-              account_id: receiverAccount.id,
-              old_account_id: senderAccount.id,
-            };
-          }),
-          //Put the original tender in reserve
-          ...tender.map(t => {
-            return {
-              ...t,
-              account_id: null,
-              old_account_id: senderAccount.id,
-            };
-          }),
-        );
-      } else {
-        //Mint new coins. Put original tender in reserve.
-        const toReceiver = mint(amtInCents);
-        const change = mint(changeAmtInCents);
-        finalTokensToMint.push(
-          ...toReceiver.map(amt => {
-            return {
-              value_in_cents: amt,
-              account_id: receiverAccount.id,
-              old_account_id: senderAccount.id,
-            };
-          }),
-          ...change.map(amt => {
-            return {
-              value_in_cents: amt,
-              account_id: senderAccount.id,
-              old_account_id: receiverAccount.id,
-            };
-          }),
-        );
-
-        finalTokensToUpdate.push(
-          ...tender.map(t => {
-            return {
-              ...t,
-              account_id: null,
-              old_account_id: senderAccount.id,
-            };
-          }),
-        );
-      }
-    } else {
-      //No change; just give the tender to the receiver.
+    const assignFinalTokensToUpdate = (
+      toSender: TBill[] = [],
+      toReceiver: TBill[] = [],
+      toReserve: TBill[] = [],
+    ) => {
       finalTokensToUpdate.push(
-        ...tender.map(t => {
+        ...toSender.map(t => {
           return {
             ...t,
+            old_account_id: receiverAccount.id,
+            account_id: senderAccount.id,
+          };
+        }),
+        ...toReceiver.map(t => {
+          return {
+            ...t,
+            old_account_id: senderAccount.id,
             account_id: receiverAccount.id,
+          };
+        }),
+        ...toReserve.map(t => {
+          return {
+            ...t,
+            account_id: null,
             old_account_id: senderAccount.id,
           };
         }),
       );
+    };
+
+    const assignFinalTokensToMint = (
+      toSender: Pick<TBill, 'value_in_cents'>[] = [],
+      toReceiver: Pick<TBill, 'value_in_cents'>[] = [],
+    ) => {
+      finalTokensToMint.push(
+        ...toSender.map(t => {
+          return {
+            value_in_cents: t.value_in_cents,
+            account_id: senderAccount.id,
+          };
+        }),
+        ...toReceiver.map(t => {
+          return {
+            value_in_cents: t.value_in_cents,
+            account_id: receiverAccount.id,
+          };
+        }),
+      );
+    };
+
+    if (changeAmtInCents > 0) {
+      //1. Try to get change from the receiver. Has to be exact.
+      if (containsExactly(receiverTokens, changeAmtInCents)) {
+        console.log('Getting change from receiver...');
+        const change = pick(receiverTokens, changeAmtInCents);
+        assignFinalTokensToUpdate(change, tender);
+      }
+      //2. Try to get change from the reserve. Has to be exact.
+      else if (
+        containsExactly(reserveTokens, amtInCents) &&
+        //This should check the reserve without the amount in cents, against the change.
+        containsExactly(without(reserveTokens, amtInCents), changeAmtInCents)
+      ) {
+        console.log('Getting change from reserve...');
+        const change = pick(reserveTokens, changeAmtInCents);
+        const toReceiver = pick(reserveTokens, amtInCents);
+        assignFinalTokensToUpdate(change, toReceiver, tender);
+      } else {
+        //Mint new coins. Put original tender in reserve.
+        console.log('Minting change and tender...');
+        const toReceiver = mint(amtInCents);
+        const change = mint(changeAmtInCents);
+
+        assignFinalTokensToUpdate([], [], tender);
+        assignFinalTokensToMint(change, toReceiver);
+      }
+    } else {
+      //No change; just give the tender to the receiver.
+      assignFinalTokensToUpdate([], tender);
     }
 
     await db.transaction(async trx => {
