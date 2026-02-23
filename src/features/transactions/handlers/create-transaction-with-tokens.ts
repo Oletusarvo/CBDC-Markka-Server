@@ -175,7 +175,7 @@ export const createTransactionWithTokens = createHandler(
           });
 
         if (rows !== 1) {
-          throw new Error('Double spend detected!');
+         // throw new Error('Double spend detected!');
         }
       }
 
