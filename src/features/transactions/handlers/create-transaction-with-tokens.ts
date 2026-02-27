@@ -11,6 +11,7 @@ import {
   TBill,
   without,
 } from '../../currencies/util/currency-util';
+import { CoinBatch } from '../../currencies/util/coin-batch';
 
 export const createTransactionWithTokens = createHandler(
   async (req: AuthenticatedExpressRequest, res) => {
@@ -38,29 +39,35 @@ export const createTransactionWithTokens = createHandler(
       });
     }
 
-    const amtInCents = req.data.amt * 100;
+    const amtInCents = Math.round(req.data.amt * 100);
 
-    const senderTokens = await getTokens(db).where({
-      account_id: senderAccount.id,
-    });
+    const senderTokens = new CoinBatch(
+      await getTokens(db).where({
+        account_id: senderAccount.id,
+      }),
+    );
 
-    if (sumTokens(senderTokens) < amtInCents) {
+    if (senderTokens.sum < amtInCents) {
       return res.status(409).json({
         error: 'transaction:insufficient-funds',
       });
     }
 
-    const receiverTokens = await getTokens(db).where({
-      account_id: receiverAccount.id,
-    });
+    const receiverTokens = new CoinBatch(
+      await getTokens(db).where({
+        account_id: receiverAccount.id,
+      }),
+    );
 
-    const reserveTokens = await getTokens(db)
-      .whereNull('account_id')
-      .orderBy('denom_type.value_in_cents', 'desc')
-      .limit(200);
+    const reserveTokens = new CoinBatch(
+      await getTokens(db)
+        .whereNull('account_id')
+        .orderBy('denom_type.value_in_cents', 'desc')
+        .limit(200),
+    );
 
-    const tender = pick(senderTokens, amtInCents);
-    const tenderSum = sumTokens(tender);
+    const tender = senderTokens.pick(amtInCents);
+    const tenderSum = tender.sum;
     const changeAmtInCents = tenderSum - amtInCents;
 
     const finalTokensToMint = [];
@@ -118,33 +125,34 @@ export const createTransactionWithTokens = createHandler(
 
     if (changeAmtInCents > 0) {
       //1. Try to get change from the receiver. Has to be exact.
-      if (containsExactly(receiverTokens, changeAmtInCents)) {
+      if (receiverTokens.containsExactly(changeAmtInCents)) {
         console.log('Getting change from receiver...');
-        const change = pick(receiverTokens, changeAmtInCents);
-        assignFinalTokensToUpdate(change, tender);
+        const change = receiverTokens.pick(changeAmtInCents);
+        assignFinalTokensToUpdate(change.coins, tender.coins);
       }
       //2. Try to get change from the reserve. Has to be exact.
       else if (
-        containsExactly(reserveTokens, amtInCents) &&
+        reserveTokens.containsExactly(amtInCents) &&
         //This should check the reserve without the amount in cents, against the change.
-        containsExactly(without(reserveTokens, amtInCents), changeAmtInCents)
+        reserveTokens.without(amtInCents).containsExactly(changeAmtInCents)
       ) {
         console.log('Getting change from reserve...');
-        const change = pick(reserveTokens, changeAmtInCents);
-        const toReceiver = pick(reserveTokens, amtInCents);
-        assignFinalTokensToUpdate(change, toReceiver, tender);
+        const change = reserveTokens.pick(changeAmtInCents);
+        const toReceiver = reserveTokens.pick(amtInCents);
+        assignFinalTokensToUpdate(change.coins, toReceiver.coins, tender.coins);
       } else {
         //Mint new coins. Put original tender in reserve.
         console.log('Minting change and tender...');
         const toReceiver = mint(amtInCents);
         const change = mint(changeAmtInCents);
 
-        assignFinalTokensToUpdate([], [], tender);
+        assignFinalTokensToUpdate([], [], tender.coins);
+        console.log(change, toReceiver, changeAmtInCents);
         assignFinalTokensToMint(change, toReceiver);
       }
     } else {
       //No change; just give the tender to the receiver.
-      assignFinalTokensToUpdate([], tender);
+      assignFinalTokensToUpdate([], tender.coins);
     }
 
     await db.transaction(async trx => {

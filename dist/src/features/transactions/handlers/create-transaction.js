@@ -2,21 +2,22 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createTransaction = void 0;
 const db_config_1 = require("../../../db-config");
+const tablenames_1 = require("../../../tablenames");
 const create_handler_1 = require("../../../utils/create-handler");
 /**Transfers money between two accounts. */
 exports.createTransaction = (0, create_handler_1.createHandler)(async (req, res) => {
     const session = req.session;
-    const sender = await (0, db_config_1.db)('account')
+    const senderAccount = await (0, db_config_1.db)(tablenames_1.tablenames.accounts)
         .where({ user_id: session.user.id })
         .select('balance_in_cents', 'id')
         .first();
-    const receiver = await (0, db_config_1.db)('account')
+    const receiverAccount = await (0, db_config_1.db)(tablenames_1.tablenames.accounts)
         .where({
         id: db_config_1.db
             .select('id')
-            .from('account')
+            .from(tablenames_1.tablenames.accounts)
             .where({
-            user_id: db_config_1.db.select('id').from('user').where({ email: req.data.email }).limit(1),
+            user_id: db_config_1.db.select('id').from(tablenames_1.tablenames.users).where({ email: req.data.email }).limit(1),
         })
             .limit(1),
     })
@@ -24,27 +25,36 @@ exports.createTransaction = (0, create_handler_1.createHandler)(async (req, res)
         .first();
     //Convert to cents.
     const amt_in_cents = req.data.amt * 100;
-    if (!sender) {
+    if (!senderAccount) {
         return res.status(404).json({
-            error: 'The sender account does not exist!',
+            error: 'transaction:sender-invalid',
         });
     }
-    else if (!receiver) {
+    else if (!receiverAccount) {
         return res.status(404).json({
-            error: 'The receiver account does not exist!',
+            error: 'transaction:invalid-recipient',
         });
     }
-    else if (amt_in_cents > sender.balance_in_cents) {
+    else if (senderAccount.id === receiverAccount.id) {
         return res.status(409).json({
-            error: 'account:insufficient_funds',
+            error: 'transaction:self-transaction',
+        });
+    }
+    else if (amt_in_cents > senderAccount.balance_in_cents) {
+        return res.status(409).json({
+            error: 'transaction:insufficient-funds',
         });
     }
     await db_config_1.db.transaction(async (trx) => {
-        await trx('account').where({ id: sender.id }).decrement('balance_in_cents', amt_in_cents);
-        await trx('account').where({ id: receiver.id }).increment('balance_in_cents', amt_in_cents);
-        await trx('transaction').insert({
-            from: sender.id,
-            to: receiver.id,
+        await trx(tablenames_1.tablenames.accounts)
+            .where({ id: senderAccount.id })
+            .decrement('balance_in_cents', amt_in_cents);
+        await trx(tablenames_1.tablenames.accounts)
+            .where({ id: receiverAccount.id })
+            .increment('balance_in_cents', amt_in_cents);
+        await trx(tablenames_1.tablenames.transactions).insert({
+            from: senderAccount.id,
+            to: receiverAccount.id,
             amount_in_cents: amt_in_cents,
             message: req.data.message,
         });

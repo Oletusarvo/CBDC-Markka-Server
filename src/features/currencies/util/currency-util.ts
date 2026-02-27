@@ -3,6 +3,7 @@ export type TBill = {
   account_id: string | null;
   value_in_cents: number;
   minted_at: Date;
+  signature?: string;
 };
 
 const sum = (arr: TBill[]) => arr.reduce((acc, cur) => (acc += cur.value_in_cents), 0);
@@ -16,10 +17,10 @@ export const DENOMS_IN_CENTS = [
 /**Greedily mints new currency, creating as few new tokens as possible.*/
 export function mint(amountInCents: number, maxDenom = 50000) {
   let mintedBills = [];
-
   while (amountInCents > 0) {
     const denom = DENOMS_IN_CENTS.find(den => den < amountInCents || den === amountInCents);
-    amountInCents -= denom;
+    console.log(denom, amountInCents);
+    amountInCents = Math.round(amountInCents - denom);
     mintedBills.push({ value_in_cents: denom });
   }
 

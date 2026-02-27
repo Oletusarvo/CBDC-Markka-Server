@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.currenciesRouter = void 0;
+const get_router_1 = require("../../utils/get-router");
+const check_auth_1 = require("../auth/middleware/check-auth");
+const get_circulation_1 = require("./handlers/get-circulation");
+const get_user_tokens_1 = require("./handlers/get-user-tokens");
+const router = (0, get_router_1.getRouter)();
+exports.currenciesRouter = router;
+router.get('/circulation', get_circulation_1.getCirculation);
+router.get('/tokens', (0, check_auth_1.checkAuth)(), get_user_tokens_1.getUserTokens);
