@@ -71,7 +71,7 @@ export const registerUserHandler = createHandler(
           mintedTokens.map(async t => {
             await trx(tablenames.currencyObjects).insert({
               account_id: acc.id,
-              currency_denom_type_id: trx
+              denom_type_id: trx
                 .select('id')
                 .from(tablenames.denomTypes)
                 .where({ value_in_cents: t })
