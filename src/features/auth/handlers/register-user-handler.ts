@@ -74,7 +74,7 @@ export const registerUserHandler = createHandler(
               denom_type_id: trx
                 .select('id')
                 .from(tablenames.denomTypes)
-                .where({ value_in_cents: t })
+                .where({ value_in_cents: t.value_in_cents })
                 .limit(1),
             });
           }),
